@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   CHROMIUM_VERSION,
   getChromiumVersion,
@@ -8,7 +8,12 @@ import {
   parseVersion,
   versionNewer,
 } from "../src/config.js";
-import { getLatestChromiumVersion, parseChecksums } from "../src/download.js";
+import {
+  checkWrapperUpdate,
+  getLatestChromiumVersion,
+  parseChecksums,
+  resetWrapperUpdateChecked,
+} from "../src/download.js";
 
 describe("version comparison", () => {
   it("parseVersion handles 4-part versions", () => {
@@ -146,6 +151,85 @@ describe("latest version (platform-aware)", () => {
   it("returns null on network error", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("timeout"));
     expect(await getLatestChromiumVersion()).toBeNull();
+  });
+});
+
+describe("wrapper update check", () => {
+  beforeEach(() => {
+    resetWrapperUpdateChecked();
+    delete process.env.CLOAKBROWSER_AUTO_UPDATE;
+    delete process.env.CLOAKBROWSER_DOWNLOAD_URL;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.CLOAKBROWSER_AUTO_UPDATE;
+    delete process.env.CLOAKBROWSER_DOWNLOAD_URL;
+  });
+
+  it("warns when newer version available", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: "99.0.0" }),
+    } as Response);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await checkWrapperUpdate();
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Update available"));
+  });
+
+  it("silent when current version", async () => {
+    const { WRAPPER_VERSION } = await import("../src/config.js");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: WRAPPER_VERSION }),
+    } as Response);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await checkWrapperUpdate();
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("disabled by CLOAKBROWSER_AUTO_UPDATE=false", async () => {
+    process.env.CLOAKBROWSER_AUTO_UPDATE = "false";
+    const spy = vi.spyOn(globalThis, "fetch");
+
+    await checkWrapperUpdate();
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("disabled by CLOAKBROWSER_DOWNLOAD_URL", async () => {
+    process.env.CLOAKBROWSER_DOWNLOAD_URL = "https://mirror.example.com";
+    const spy = vi.spyOn(globalThis, "fetch");
+
+    await checkWrapperUpdate();
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("silent on network error", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("timeout"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await checkWrapperUpdate();
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("runs only once per process", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ version: "0.0.1" }),
+    } as Response);
+
+    await checkWrapperUpdate();
+    await checkWrapperUpdate();
+
+    expect(spy).toHaveBeenCalledOnce();
   });
 });
 

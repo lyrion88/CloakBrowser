@@ -6,6 +6,20 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Read wrapper version from package.json (single source of truth)
+let WRAPPER_VERSION = "0.0.0";
+try {
+  const _configDir = path.dirname(fileURLToPath(import.meta.url));
+  const _pkgPath = path.resolve(_configDir, "..", "package.json");
+  const _pkg = JSON.parse(fs.readFileSync(_pkgPath, "utf-8")) as { version: string };
+  WRAPPER_VERSION = _pkg.version;
+} catch {
+  // Fallback — package.json not found (bundled or unusual layout).
+  // Wrapper update check will compare against 0.0.0 and always suggest updating.
+}
+export { WRAPPER_VERSION };
 
 // ---------------------------------------------------------------------------
 // Chromium version shipped with this release.

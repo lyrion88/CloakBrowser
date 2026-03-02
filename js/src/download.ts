@@ -17,6 +17,7 @@ import {
   DOWNLOAD_BASE_URL,
   GITHUB_API_URL,
   GITHUB_DOWNLOAD_BASE_URL,
+  WRAPPER_VERSION,
   checkPlatformAvailable,
   getBinaryDir,
   getBinaryPath,
@@ -477,6 +478,36 @@ function writeVersionMarker(version: string): void {
   fs.renameSync(tmp, marker);
 }
 
+let wrapperUpdateChecked = false;
+
+/** @internal Exported for testing only. */
+export function resetWrapperUpdateChecked(): void {
+  wrapperUpdateChecked = false;
+}
+
+/** @internal Exported for testing only. */
+export async function checkWrapperUpdate(): Promise<void> {
+  if (wrapperUpdateChecked) return;
+  wrapperUpdateChecked = true;
+  if (process.env.CLOAKBROWSER_AUTO_UPDATE?.toLowerCase() === "false") return;
+  if (process.env.CLOAKBROWSER_DOWNLOAD_URL) return;
+  try {
+    const resp = await fetch("https://registry.npmjs.org/cloakbrowser/latest", {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) return;
+    const data = (await resp.json()) as { version: string };
+    if (data.version && versionNewer(data.version, WRAPPER_VERSION)) {
+      console.warn(
+        `[cloakbrowser] Update available: ${WRAPPER_VERSION} → ${data.version}. ` +
+          `Run: npm install cloakbrowser@latest`
+      );
+    }
+  } catch {
+    // Non-fatal — never block binary update check
+  }
+}
+
 async function checkAndDownloadUpdate(): Promise<void> {
   try {
     // Record check timestamp first (rate limiting)
@@ -514,7 +545,12 @@ async function checkAndDownloadUpdate(): Promise<void> {
 }
 
 function maybeTriggerUpdateCheck(): void {
+  // Wrapper update: once per process, not rate-limited
+  if (!wrapperUpdateChecked) {
+    checkWrapperUpdate().catch(() => {});
+  }
+
+  // Binary update: rate-limited to once per hour
   if (!shouldCheckForUpdate()) return;
-  // Fire-and-forget — don't await
   checkAndDownloadUpdate().catch(() => {});
 }

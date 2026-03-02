@@ -19,6 +19,7 @@ from cloakbrowser.config import (
     get_platform_tag,
 )
 from cloakbrowser.download import (
+    _check_wrapper_update,
     _get_latest_chromium_version,
     _parse_checksums,
     _should_check_for_update,
@@ -245,6 +246,67 @@ class TestGetLatestVersion:
         with patch("cloakbrowser.download.httpx.get", side_effect=Exception("timeout")):
             result = _get_latest_chromium_version()
             assert result is None
+
+
+class TestWrapperUpdateCheck:
+    """Tests for _check_wrapper_update (PyPI version check)."""
+
+    def setup_method(self):
+        import cloakbrowser.download as dl
+        dl._wrapper_update_checked = False
+
+    def test_warns_when_newer_version_available(self, caplog):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"info": {"version": "99.0.0"}}
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("cloakbrowser.download.httpx.get", return_value=mock_resp):
+            import logging
+            with caplog.at_level(logging.WARNING):
+                _check_wrapper_update()
+            assert "Update available" in caplog.text
+            assert "99.0.0" in caplog.text
+
+    def test_silent_when_current(self, caplog):
+        import cloakbrowser.download as dl
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"info": {"version": dl._wrapper_version}}
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("cloakbrowser.download.httpx.get", return_value=mock_resp):
+            import logging
+            with caplog.at_level(logging.WARNING):
+                _check_wrapper_update()
+            assert "Update available" not in caplog.text
+
+    def test_disabled_by_auto_update_env(self):
+        with patch.dict(os.environ, {"CLOAKBROWSER_AUTO_UPDATE": "false"}):
+            with patch("cloakbrowser.download.httpx.get") as mock_get:
+                _check_wrapper_update()
+                mock_get.assert_not_called()
+
+    def test_disabled_by_custom_download_url(self):
+        with patch.dict(os.environ, {"CLOAKBROWSER_DOWNLOAD_URL": "https://mirror.example.com"}):
+            with patch("cloakbrowser.download.httpx.get") as mock_get:
+                _check_wrapper_update()
+                mock_get.assert_not_called()
+
+    def test_network_error_silent(self, caplog):
+        with patch("cloakbrowser.download.httpx.get", side_effect=Exception("timeout")):
+            import logging
+            with caplog.at_level(logging.WARNING):
+                _check_wrapper_update()
+            assert "Update available" not in caplog.text
+
+    def test_runs_only_once(self):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"info": {"version": "0.0.1"}}
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("cloakbrowser.download.httpx.get", return_value=mock_resp) as mock_get:
+            _check_wrapper_update()
+            _check_wrapper_update()
+            assert mock_get.call_count == 1
 
 
 class TestParseChecksums:

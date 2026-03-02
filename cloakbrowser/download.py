@@ -20,6 +20,7 @@ from pathlib import Path
 
 import httpx
 
+from ._version import __version__ as _wrapper_version
 from .config import (
     CHROMIUM_VERSION,
     DOWNLOAD_BASE_URL,
@@ -456,6 +457,37 @@ def _write_version_marker(version: str) -> None:
     tmp.rename(marker)
 
 
+_wrapper_update_checked = False
+
+
+def _check_wrapper_update() -> None:
+    """Check PyPI for a newer wrapper version. Runs once per process."""
+    global _wrapper_update_checked
+    if _wrapper_update_checked:
+        return
+    _wrapper_update_checked = True
+    if os.environ.get("CLOAKBROWSER_AUTO_UPDATE", "").lower() == "false":
+        return
+    if os.environ.get("CLOAKBROWSER_DOWNLOAD_URL"):
+        return
+    try:
+        resp = httpx.get(
+            "https://pypi.org/pypi/cloakbrowser/json",
+            timeout=5.0,
+        )
+        resp.raise_for_status()
+        latest = resp.json()["info"]["version"]
+        if _version_newer(latest, _wrapper_version):
+            logger.warning(
+                "Update available: cloakbrowser %s → %s. "
+                "Run: pip install --upgrade cloakbrowser",
+                _wrapper_version,
+                latest,
+            )
+    except Exception:
+        logger.debug("Wrapper update check failed", exc_info=True)
+
+
 def _check_and_download_update() -> None:
     """Background task: check for newer binary, download if available."""
     try:
@@ -493,6 +525,12 @@ def _check_and_download_update() -> None:
 
 def _maybe_trigger_update_check() -> None:
     """Fire-and-forget update check in a daemon thread."""
+    # Wrapper update: once per process, not rate-limited
+    if not _wrapper_update_checked:
+        t = threading.Thread(target=_check_wrapper_update, daemon=True)
+        t.start()
+
+    # Binary update: rate-limited to once per hour
     if not _should_check_for_update():
         return
     t = threading.Thread(target=_check_and_download_update, daemon=True)

@@ -6,6 +6,12 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.1] — 2026-03-03
+
+- **[wrapper]** Auto-check for wrapper updates on startup (PyPI/npm). Notifies users when a newer wrapper version is available. Runs once per process, respects `CLOAKBROWSER_AUTO_UPDATE=false`.
+
+---
+
 ## [0.3.0] — 2026-03-02
 
 Chromium v145 upgrade. 25 fingerprint patches (up from 16). New download verification and fallback system. macOS v145 binary builds pending.
