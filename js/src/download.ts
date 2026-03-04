@@ -89,8 +89,8 @@ export async function ensureBinary(): Promise<string> {
   if (!fs.existsSync(downloadedPath)) {
     throw new Error(
       `Download completed but binary not found at expected path: ${downloadedPath}. ` +
-        `This may indicate a packaging issue. Please report at ` +
-        `https://github.com/CloakHQ/cloakbrowser/issues`
+      `This may indicate a packaging issue. Please report at ` +
+      `https://github.com/CloakHQ/cloakbrowser/issues`
     );
   }
 
@@ -276,6 +276,9 @@ async function downloadFile(url: string, dest: string): Promise<void> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
 
+  // Create file stream early so we can ensure cleanup on error
+  const fileStream = createWriteStream(dest);
+
   try {
     const response = await fetch(url, {
       signal: controller.signal,
@@ -294,7 +297,6 @@ async function downloadFile(url: string, dest: string): Promise<void> {
     let downloaded = 0;
     let lastLoggedPct = -1;
 
-    const fileStream = createWriteStream(dest);
     const reader = response.body.getReader();
 
     // Stream chunks to file with progress logging
@@ -318,18 +320,31 @@ async function downloadFile(url: string, dest: string): Promise<void> {
       }
     }
 
-    // Wait for file stream to finish
+    // Wait for file stream to fully close (not just finish)
     await new Promise<void>((resolve, reject) => {
-      fileStream.end(() => resolve());
+      fileStream.end();
+      fileStream.on("close", () => resolve());
       fileStream.on("error", reject);
     });
 
     const sizeMB = Math.floor(fs.statSync(dest).size / (1024 * 1024));
     console.log(`[cloakbrowser] Download complete: ${sizeMB} MB`);
+  } catch (err) {
+    // Ensure file stream is destroyed on error to release the handle
+    if (!fileStream.destroyed) {
+      await new Promise<void>((resolve) => {
+        fileStream.destroy();
+        fileStream.on("close", () => resolve());
+        // Safety timeout in case close never fires
+        setTimeout(resolve, 2000);
+      });
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
 }
+
 
 async function extractArchive(
   archivePath: string,
@@ -387,12 +402,16 @@ async function extractTar(archivePath: string, destDir: string): Promise<void> {
 }
 
 async function extractZip(archivePath: string, destDir: string): Promise<void> {
-  const { execFileSync } = await import("node:child_process");
-  // Use system unzip — available on Windows (PowerShell), macOS, and Linux
+  // Brief delay to ensure OS fully releases file handles (Windows)
+  await new Promise(resolve => setTimeout(resolve, 500));
+
   if (process.platform === "win32") {
+    // PowerShell 5.1's Expand-Archive uses .NET FileStream which can conflict
+    // with recently-closed Node.js file handles. Use ZipFile API directly.
     execFileSync("powershell", [
       "-NoProfile", "-Command",
-      `Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force`,
+      `Add-Type -AssemblyName System.IO.Compression.FileSystem; ` +
+      `[System.IO.Compression.ZipFile]::ExtractToDirectory('${archivePath}', '${destDir}')`,
     ], { timeout: 120_000 });
   } else {
     execFileSync("unzip", ["-o", archivePath, "-d", destDir], { timeout: 120_000 });
@@ -520,7 +539,7 @@ export async function checkWrapperUpdate(): Promise<void> {
     if (data.version && versionNewer(data.version, WRAPPER_VERSION)) {
       console.warn(
         `[cloakbrowser] Update available: ${WRAPPER_VERSION} → ${data.version}. ` +
-          `Run: npm install cloakbrowser@latest`
+        `Run: npm install cloakbrowser@latest`
       );
     }
   } catch {
@@ -567,10 +586,10 @@ async function checkAndDownloadUpdate(): Promise<void> {
 function maybeTriggerUpdateCheck(): void {
   // Wrapper update: once per process, not rate-limited
   if (!wrapperUpdateChecked) {
-    checkWrapperUpdate().catch(() => {});
+    checkWrapperUpdate().catch(() => { });
   }
 
   // Binary update: rate-limited to once per hour
   if (!shouldCheckForUpdate()) return;
-  checkAndDownloadUpdate().catch(() => {});
+  checkAndDownloadUpdate().catch(() => { });
 }
