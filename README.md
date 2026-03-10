@@ -110,7 +110,7 @@ page.goto("https://example.com")
 
 > ⭐ **Star** to show support — **[Watch releases](https://github.com/CloakHQ/CloakBrowser/subscription)** to get notified when new builds drop.
 
-## Latest: v0.3.12 (Chromium 145.0.7632.159.4)
+## Latest: v0.3.13 (Chromium 145.0.7632.159.5)
 
 - **`humanize=True`** — one flag makes all mouse, keyboard, and scroll interactions behave like a real user. Bézier curves, per-character typing, realistic scroll patterns. Two presets: `default` and `careful`
 - **CDP input behavior mimicking** — input events sent via CDP now produce the same signals as real user interactions. 5 new source-level patches covering pointer, keyboard, and mouse behavior
@@ -938,7 +938,7 @@ All releases are signed for supply chain verification.
 ```bash
 # Verify GPG signature (binary release tag)
 gpg --keyserver keyserver.ubuntu.com --recv-keys C60C0DDC9D0DE2DD
-git verify-tag chromium-v145.0.7632.159.4
+git verify-tag chromium-v145.0.7632.159.5
 
 # Verify GitHub binary attestation (Sigstore)
 gh attestation verify cloakbrowser-linux-x64.tar.gz --repo CloakHQ/cloakbrowser

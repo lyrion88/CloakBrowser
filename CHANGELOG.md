@@ -6,6 +6,11 @@ Changes are tagged: **[wrapper]** for Python/JS wrapper, **[binary]** for Chromi
 
 ---
 
+## [0.3.13] — 2026-03-10
+
+- **[wrapper]** Suppress Playwright's `--enable-unsafe-swiftshader` default arg — eliminates SwiftShader software renderer detection signal, letting the binary's GPU spoofing work cleanly
+- **[binary]** Upgrade Linux build to 145.0.7632.159.5 — fix WebGPU adapter limits and features for NVIDIA profiles
+
 ## [0.3.12] — 2026-03-10
 
 - **[binary]** Upgrade Linux build to 145.0.7632.159.4

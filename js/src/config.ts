@@ -27,10 +27,10 @@ export { WRAPPER_VERSION };
 // CHROMIUM_VERSION is the latest across all platforms (for display/reference).
 // Use getChromiumVersion() for the current platform's actual version.
 // ---------------------------------------------------------------------------
-export const CHROMIUM_VERSION = "145.0.7632.159.4";
+export const CHROMIUM_VERSION = "145.0.7632.159.5";
 
 export const PLATFORM_CHROMIUM_VERSIONS: Record<string, string> = {
-  "linux-x64": "145.0.7632.159.4",
+  "linux-x64": "145.0.7632.159.5",
   "darwin-arm64": "145.0.7632.109.2",
   "darwin-x64": "145.0.7632.109.2",
   "windows-x64": "145.0.7632.109.2",
@@ -187,6 +187,14 @@ export function versionNewer(a: string, b: string): boolean {
 export function getLocalBinaryOverride(): string | undefined {
   return process.env.CLOAKBROWSER_BINARY_PATH || undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Playwright default args to suppress — these leak automation signals.
+// --enable-automation: exposes navigator.webdriver = true
+// --enable-unsafe-swiftshader: forces software WebGL rendering via SwiftShader,
+//   producing a distinctive renderer string that no real user browser has
+// ---------------------------------------------------------------------------
+export const IGNORE_DEFAULT_ARGS = ["--enable-automation", "--enable-unsafe-swiftshader"];
 
 // ---------------------------------------------------------------------------
 // Default stealth arguments

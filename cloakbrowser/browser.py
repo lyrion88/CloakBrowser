@@ -19,7 +19,7 @@ import os
 from typing import Any, Literal, TypedDict
 from urllib.parse import unquote, urlparse, urlunparse
 
-from .config import DEFAULT_VIEWPORT, get_default_stealth_args
+from .config import DEFAULT_VIEWPORT, IGNORE_DEFAULT_ARGS, get_default_stealth_args
 from .download import ensure_binary
 
 logger = logging.getLogger("cloakbrowser")
@@ -111,7 +111,7 @@ def launch(
         executable_path=binary_path,
         headless=headless,
         args=chrome_args,
-        ignore_default_args=["--enable-automation"],
+        ignore_default_args=IGNORE_DEFAULT_ARGS,
         **_build_proxy_kwargs(proxy),
         **kwargs,
     )
@@ -194,7 +194,7 @@ async def launch_async(  # noqa: C901
         executable_path=binary_path,
         headless=headless,
         args=chrome_args,
-        ignore_default_args=["--enable-automation"],
+        ignore_default_args=IGNORE_DEFAULT_ARGS,
         **_build_proxy_kwargs(proxy),
         **kwargs,
     )
@@ -305,7 +305,7 @@ def launch_persistent_context(
         executable_path=binary_path,
         headless=headless,
         args=chrome_args,
-        ignore_default_args=["--enable-automation"],
+        ignore_default_args=IGNORE_DEFAULT_ARGS,
         **_build_proxy_kwargs(proxy),
         **context_kwargs,
     )
@@ -418,7 +418,7 @@ async def launch_persistent_context_async(
         executable_path=binary_path,
         headless=headless,
         args=chrome_args,
-        ignore_default_args=["--enable-automation"],
+        ignore_default_args=IGNORE_DEFAULT_ARGS,
         **_build_proxy_kwargs(proxy),
         **context_kwargs,
     )

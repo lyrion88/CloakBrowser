@@ -5,7 +5,7 @@
 
 import type { Browser, BrowserContext } from "playwright-core";
 import type { LaunchOptions, LaunchContextOptions, LaunchPersistentContextOptions } from "./types.js";
-import { DEFAULT_VIEWPORT } from "./config.js";
+import { DEFAULT_VIEWPORT, IGNORE_DEFAULT_ARGS } from "./config.js";
 import { buildArgs } from "./args.js";
 import { ensureBinary } from "./download.js";
 import { parseProxyUrl } from "./proxy.js";
@@ -45,7 +45,7 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
     executablePath: binaryPath,
     headless: options.headless ?? true,
     args,
-    ignoreDefaultArgs: ["--enable-automation"],
+    ignoreDefaultArgs: IGNORE_DEFAULT_ARGS,
     ...(options.proxy
       ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
       : {}),
@@ -163,7 +163,7 @@ export async function launchPersistentContext(
     executablePath: binaryPath,
     headless: options.headless ?? true,
     args,
-    ignoreDefaultArgs: ["--enable-automation"],
+    ignoreDefaultArgs: IGNORE_DEFAULT_ARGS,
     ...(options.proxy
       ? { proxy: typeof options.proxy === "string" ? parseProxyUrl(options.proxy) : options.proxy }
       : {}),

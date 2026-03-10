@@ -15,14 +15,22 @@ from ._version import __version__
 # CHROMIUM_VERSION is the latest across all platforms (for display/reference).
 # Use get_chromium_version() for the current platform's actual version.
 # ---------------------------------------------------------------------------
-CHROMIUM_VERSION = "145.0.7632.159.4"
+CHROMIUM_VERSION = "145.0.7632.159.5"
 
 PLATFORM_CHROMIUM_VERSIONS: dict[str, str] = {
-    "linux-x64": "145.0.7632.159.4",
+    "linux-x64": "145.0.7632.159.5",
     "darwin-arm64": "145.0.7632.109.2",
     "darwin-x64": "145.0.7632.109.2",
     "windows-x64": "145.0.7632.109.2",
 }
+
+# ---------------------------------------------------------------------------
+# Playwright default args to suppress — these leak automation signals.
+# --enable-automation: exposes navigator.webdriver = true
+# --enable-unsafe-swiftshader: forces software WebGL rendering via SwiftShader,
+#   producing a distinctive renderer string that no real user browser has
+# ---------------------------------------------------------------------------
+IGNORE_DEFAULT_ARGS = ["--enable-automation", "--enable-unsafe-swiftshader"]
 
 # ---------------------------------------------------------------------------
 # Default stealth arguments passed to the patched Chromium binary.

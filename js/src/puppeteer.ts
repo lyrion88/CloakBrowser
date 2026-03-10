@@ -5,6 +5,7 @@
 
 import type { Browser } from "puppeteer-core";
 import type { LaunchOptions } from "./types.js";
+import { IGNORE_DEFAULT_ARGS } from "./config.js";
 import { buildArgs } from "./args.js";
 import { ensureBinary } from "./download.js";
 import { parseProxyUrl } from "./proxy.js";
@@ -62,7 +63,7 @@ export async function launch(options: LaunchOptions = {}): Promise<Browser> {
     executablePath: binaryPath,
     headless: options.headless ?? true,
     args,
-    ignoreDefaultArgs: ["--enable-automation"],
+    ignoreDefaultArgs: IGNORE_DEFAULT_ARGS,
     ...options.launchOptions,
   });
 
